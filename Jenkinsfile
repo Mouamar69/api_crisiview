@@ -16,10 +16,20 @@ pipeline {
 
         stage('Tests') {
             steps {
-                sh 'npm test -- --coverage --forceExit'
+                sh '''
+                    docker run -d --name mysql-test \
+                      --network devops \
+                      -e MYSQL_ROOT_PASSWORD=root \
+                      -e MYSQL_DATABASE=incident_db \
+                      mysql:8
+                    until docker exec mysql-test mysqladmin ping -h localhost -u root -proot --silent 2>/dev/null; do sleep 3; done
+                    DB_HOST=mysql-test DB_PORT=3306 npm test -- --coverage --forceExit
+                '''
             }
             post {
                 always {
+                    sh 'docker stop mysql-test || true'
+                    sh 'docker rm mysql-test || true'
                     archiveArtifacts artifacts: 'coverage/**', allowEmptyArchive: true
                 }
             }
