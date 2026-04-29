@@ -37,30 +37,19 @@ pipeline {
 
         stage('SonarQube Analysis') {
             steps {
-                withCredentials([string(credentialsId: 'sonarqube-token', variable: 'SONAR_TOKEN')]) {
-                    sh '''
-                        echo "=== SonarQube version ==="
-                        docker run --rm --network devops curlimages/curl \
-                          curl -s http://sonarqube:9000/api/server/version
-                        echo ""
-                        echo "=== Running scanner ==="
-                        docker run --rm \
-                          --network devops \
-                          -e SONAR_HOST_URL=http://sonarqube:9000 \
-                          -e SONAR_TOKEN=$SONAR_TOKEN \
-                          -v $(pwd):/usr/src \
-                          sonarsource/sonar-scanner-cli:6.2.1
-                    '''
+                script {
+                    def scannerHome = tool 'SonarScanner'
+                    withSonarQubeEnv('SonarQube') {
+                        sh "${scannerHome}/bin/sonar-scanner"
+                    }
                 }
             }
         }
 
         stage('Quality Gate') {
             steps {
-                withSonarQubeEnv('SonarQube') {
-                    timeout(time: 2, unit: 'MINUTES') {
-                        waitForQualityGate abortPipeline: false
-                    }
+                timeout(time: 2, unit: 'MINUTES') {
+                    waitForQualityGate abortPipeline: false
                 }
             }
         }
