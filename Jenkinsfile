@@ -39,12 +39,17 @@ pipeline {
             steps {
                 withCredentials([string(credentialsId: 'sonarqube-token', variable: 'SONAR_TOKEN')]) {
                     sh '''
+                        echo "=== SonarQube version ==="
+                        docker run --rm --network devops curlimages/curl \
+                          curl -s http://sonarqube_container:9000/api/server/version
+                        echo ""
+                        echo "=== Running scanner ==="
                         docker run --rm \
                           --network devops \
                           -e SONAR_HOST_URL=http://sonarqube_container:9000 \
                           -e SONAR_TOKEN=$SONAR_TOKEN \
                           -v $(pwd):/usr/src \
-                          sonarsource/sonar-scanner-cli:latest
+                          sonarsource/sonar-scanner-cli:6.2.1
                     '''
                 }
             }
